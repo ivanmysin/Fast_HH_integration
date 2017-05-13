@@ -3,7 +3,7 @@
 """
 main script
 """
-
+import numpy as np
 import HH_classes as HH
 import matplotlib.pyplot as plt
 import timeit
@@ -195,32 +195,98 @@ def get_bursting_neuron():
     return neuron
 
 
-fig, axs = plt.subplots(nrows=2, ncols=1)
+# fig, axs = plt.subplots(nrows=2, ncols=1)
 
 
 # neuron = get_fs_neuron()
 # neuron = get_rs_neuron()
 # neuron = get_LTS_neuron()
-neuron = get_bursting_neuron()
+# neuron = get_bursting_neuron()
+t_slow_mean = []
+t_fast_mean = []
 
-neuron.runfast(0.01, 1500)
-axs[0].plot(neuron.Vhist)
+t_slow_std = []
+t_fast_std = []
+
+t_slow_fs = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_fs_neuron()
+    tmp = timeit.timeit("neuron.run(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_slow_fs = np.append(t_slow_fs, tmp)
+
+t_slow_mean.append(t_slow_fs.mean())
+t_slow_std.append(t_slow_fs.std())
+
+t_fast_fs = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_fs_neuron()
+    tmp = timeit.timeit("neuron.runfast(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_fast_fs = np.append(t_fast_fs, tmp)
+
+t_fast_mean.append(t_fast_fs.mean())
+t_fast_std.append(t_fast_fs.std())
 
 
-#t_slow = timeit.timeit("neuron1.run(0.01, 1500)", setup="", globals=globals(), number=1)
-#axs[0].plot(neuron1.Vhist)
-#
-#
-#
-#neuron2 = Neuron(neurons_params)
-#neuron2.addCurrent( Current(leak_current) )
-#neuron2.addCurrent( SodiumCurrent(sodium_current_params) )
-#neuron2.addCurrent( PotassiumCurrent(potassium_current_params) )
-#neuron2.addCurrent( SlowPotassiumCurrent(slow_potassium_current_params) )
-#neuron2.addCurrent( CalciumCurrentLType(l_type_calcium_current_params) )
-## neuron2.runfast(0.01, 1500)
-#
-#t_fast= timeit.timeit("neuron2.runfast(0.01, 1500)", setup=setup, globals=globals(), number=1)
-#axs[1].plot(neuron2.Vhist)
-#
-#print (t_slow, t_fast)
+t_slow_rs = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_rs_neuron()
+    tmp = timeit.timeit("neuron.run(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_slow_rs = np.append(t_slow_rs, tmp)
+
+t_slow_mean.append(t_slow_rs.mean())
+t_slow_std.append(t_slow_rs.std())
+
+t_fast_rs = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_rs_neuron()
+    tmp = timeit.timeit("neuron.runfast(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_fast_rs = np.append(t_fast_rs, tmp)
+
+t_fast_mean.append(t_fast_rs.mean())
+t_fast_std.append(t_fast_rs.std())
+
+######################
+t_slow_lts = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_LTS_neuron()
+    tmp = timeit.timeit("neuron.run(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_slow_lts = np.append(t_slow_lts, tmp)
+
+t_slow_mean.append(t_slow_lts.mean())
+t_slow_std.append(t_slow_lts.std())
+
+t_fast_lts = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_LTS_neuron()
+    tmp = timeit.timeit("neuron.runfast(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_fast_lts = np.append(t_fast_lts, tmp)
+
+t_fast_mean.append(t_fast_lts.mean())
+t_fast_std.append(t_fast_lts.std())
+
+######################
+
+t_slow_ib = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_bursting_neuron()
+    tmp = timeit.timeit("neuron.run(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_slow_ib = np.append(t_slow_ib, tmp)
+
+t_slow_mean.append(t_slow_ib.mean())
+t_slow_std.append(t_slow_ib.std())
+
+t_fast_ib = np.array([], dtype=float)
+for idx in range(10):
+    neuron = get_bursting_neuron()
+    tmp = timeit.timeit("neuron.runfast(0.01, 1000)", setup="", globals=globals(), number=1)
+    t_fast_ib = np.append(t_fast_ib, tmp)
+
+t_fast_mean.append(t_fast_ib.mean())
+t_fast_std.append(t_fast_ib.std())
+
+
+fig2, ax = plt.subplots()
+width = 0.3
+ind = np.arange(len(t_slow_mean))
+rects1 = ax.bar(ind, t_slow_mean, width, color='b', yerr=t_slow_std)
+rects2 = ax.bar(ind + width, t_fast_mean, width, color='g', yerr=t_fast_std)
