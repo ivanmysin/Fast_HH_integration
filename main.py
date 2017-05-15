@@ -194,7 +194,6 @@ def get_bursting_neuron():
     
     return neuron
 
-
 plt.rc('axes', linewidth=2)
 plt.rc('axes', linewidth=2)
 plt.rc('axes', labelsize=18)
@@ -204,7 +203,7 @@ plt.rc('lines', linewidth=3)
 plt.rc('lines', markersize=4)
 plt.rc('lines', color="black")
 
-fig1, axs = plt.subplots(nrows=8, ncols=2, sharey=True, tight_layout=True, figsize=(15, 15))
+fig1, axs = plt.subplots(nrows=8, ncols=2, tight_layout=True, figsize=(15, 15))
 
 time4plots = np.linspace(0, 1000, 100002)
 
@@ -222,6 +221,7 @@ for idx in range(1):
     t_slow_fs = np.append(t_slow_fs, tmp)
 
 axs[0, 0].plot(time4plots, neuron.Vhist)
+axs[0, 0].set_title("FS (during simulation)", fontsize=18, loc='right')
 axs[0, 1].plot(time4plots, neuron.Vhist)
 
 t_slow_mean.append(t_slow_fs.mean())
@@ -237,6 +237,7 @@ for idx in range(1):
 
 
 axs[1, 0].plot(time4plots, neuron.Vhist)
+axs[1, 0].set_title("FS (precomputed)", fontsize=18, loc='right')
 axs[1, 1].plot(time4plots, neuron.Vhist)
 
 t_fast_mean.append(t_fast_fs.mean())
@@ -254,6 +255,7 @@ for idx in range(10):
     t_slow_rs = np.append(t_slow_rs, tmp)
 
 axs[2, 0].plot(time4plots, neuron.Vhist)
+axs[2, 0].set_title("RS (during simulation)", fontsize=18, loc='right')
 axs[2, 1].plot(time4plots, neuron.Vhist)
 
 t_slow_mean.append(t_slow_rs.mean())
@@ -266,6 +268,7 @@ for idx in range(10):
     t_fast_rs = np.append(t_fast_rs, tmp)
 
 axs[3, 0].plot(time4plots, neuron.Vhist)
+axs[3, 0].set_title("RS (precomputed)", fontsize=18, loc='right')
 axs[3, 1].plot(time4plots, neuron.Vhist)
 
 t_fast_mean.append(t_fast_rs.mean())
@@ -280,6 +283,7 @@ for idx in range(10):
     t_slow_lts = np.append(t_slow_lts, tmp)
 
 axs[4, 0].plot(time4plots, neuron.Vhist)
+axs[4, 0].set_title("LTS (during simulation)", fontsize=18, loc='right')
 axs[4, 1].plot(time4plots, neuron.Vhist)
 
 t_slow_mean.append(t_slow_lts.mean())
@@ -294,6 +298,7 @@ for idx in range(10):
     t_fast_lts = np.append(t_fast_lts, tmp)
 
 axs[5, 0].plot(time4plots, neuron.Vhist)
+axs[5, 0].set_title("LTS (precomputed)", fontsize=18, loc='right')
 axs[5, 1].plot(time4plots, neuron.Vhist)
 
 t_fast_mean.append(t_fast_lts.mean())
@@ -308,6 +313,7 @@ for idx in range(10):
     t_slow_ib = np.append(t_slow_ib, tmp)
 
 axs[6, 0].plot(time4plots, neuron.Vhist)
+axs[6, 0].set_title("IB(during simulation)", fontsize=18, loc='right')
 axs[6, 1].plot(time4plots, neuron.Vhist)
 
 t_slow_mean.append(t_slow_ib.mean())
@@ -321,18 +327,25 @@ for idx in range(10):
     t_fast_ib = np.append(t_fast_ib, tmp)
 
 axs[7, 0].plot(time4plots, neuron.Vhist)
+axs[7, 0].set_title("IB(precomputed)", fontsize=18, loc='right')
 axs[7, 1].plot(time4plots, neuron.Vhist)
 
 
 for ax in axs[:, 0]:
     ax.set_xlim(0, 1000)
     ax.set_ylim(-95, 65)
+    ax.set_ylabel("V, mV")
+ax.set_xlabel("time, ms")
 
 for ax in axs[:, 1]:
     ax.set_xlim(0, 100)
     ax.set_ylim(-95, 65)
+    ax.set_ylabel("V, mV")
+ax.set_xlabel("time, ms")
 
-fig1.savefig("figure_1.png")
+
+
+fig1.savefig("figure_1.png", dpi=300)
 
 
 
