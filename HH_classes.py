@@ -6,7 +6,6 @@ fast integration
 
 import numpy as np
 exp = np.exp
-import matplotlib.pyplot as plt
 
 
 class Current:
@@ -42,7 +41,9 @@ class SodiumCurrent(LeakCurrent):
     m_inf_fast = 0
     h_inf_fast = 0
     h_T_fast = 0
-    
+    Vmin = 0
+    Vmax = 0
+    step = 0
     def __init__(self, params):
         super().__init__(params)
         self.Vt = params["Vt"]
@@ -98,11 +99,13 @@ class SodiumCurrent(LeakCurrent):
     
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
         
-        if ( np.any(self.__class__.m_inf_fast > 0) ):
-            return
+#        if ( self.__class__.step > 0 ):
+#            return
         
         self.__class__.Vmin = Vmin
+        self.__class__.Vmin = Vmax
         self.__class__.step = step
+        
         Vrange = np.arange(Vmin, Vmax, step)
         
         self.__class__.m_inf_fast = self.get_alpha_m(Vrange) / (self.get_alpha_m(Vrange) + self.get_beta_m(Vrange))
@@ -135,7 +138,9 @@ class SodiumCurrent(LeakCurrent):
 class PotassiumCurrent(LeakCurrent):
     n_inf_fast = 0
     n_T_fast = 0
-    
+    Vmin = 0
+    Vmax = 0
+    step = 0
     def __init__(self, params):
         super().__init__(params)
         self.Vt = params["Vt"]
@@ -176,10 +181,11 @@ class PotassiumCurrent(LeakCurrent):
 
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
         
-        if ( np.any(self.__class__.n_inf_fast > 0) ):
-            return
+#        if ( self.__class__.step > 0 ):
+#            return
         
         self.__class__.Vmin = Vmin
+        self.__class__.Vmin = Vmax
         self.__class__.step = step
         Vrange = np.arange(Vmin, Vmax, step)
         
@@ -205,6 +211,10 @@ class PotassiumCurrent(LeakCurrent):
 class SlowPotassiumCurrent(LeakCurrent):
     p_inf_fast = 0
     p_T_fast   = 0
+    Vmin = 0
+    Vmax = 0
+    step = 0
+    
     def __init__(self, params):
         super().__init__(params)
         self.tau_max = params["tau_max"]
@@ -237,10 +247,11 @@ class SlowPotassiumCurrent(LeakCurrent):
     
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
         
-        if ( np.any(self.__class__.p_inf_fast > 0) ):
-            return
+#        if ( self.__class__.step > 0 ):
+#            return
         
         self.__class__.Vmin = Vmin
+        self.__class__.Vmin = Vmax
         self.__class__.step = step
         Vrange = np.arange(Vmin, Vmax, step)
         
@@ -254,9 +265,12 @@ class SlowPotassiumCurrent(LeakCurrent):
     def updateIfast(self, V, dt):
         
         idx = int( (V - self.__class__.Vmin) / self.__class__.step )
-
-        p_inf = self.__class__.p_inf_fast[idx]
-        T_p = self.__class__.p_T_fast[idx]
+        if (idx < 0):
+            p_inf = self.get_p_inf(V)
+            T_p = exp( -dt / self.get_tau_inf(V) )
+        else:
+            p_inf = self.__class__.p_inf_fast[idx]
+            T_p = self.__class__.p_T_fast[idx]
         
         self.p = p_inf - (p_inf - self.p) * T_p
         
@@ -270,7 +284,9 @@ class CalciumCurrentLType(LeakCurrent):
     r_inf_fast = 0
     q_T_fast = 0
     r_T_fast = 0
-    
+    Vmin = 0
+    Vmax = 0
+    step = 0    
     
     def __init__(self, params):
         super().__init__(params)
@@ -327,10 +343,11 @@ class CalciumCurrentLType(LeakCurrent):
     
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
         
-        if ( np.any(self.__class__.q_inf_fast > 0) ):
-            return
+#        if ( self.__class__.step > 0 ):
+#            return
         
         self.__class__.Vmin = Vmin
+        self.__class__.Vmax = Vmax
         self.__class__.step = step
         Vrange = np.arange(Vmin, Vmax, step)
         
@@ -367,7 +384,9 @@ class CalciumCurrentTType(LeakCurrent):
     s_inf_fast = 0
     u_inf_fast = 0
     u_T_fast   = 0
-    
+    Vmin = 0
+    Vmax = 0
+    step = 0  
     
     def __init__(self, params):
         super().__init__(params)
@@ -403,10 +422,11 @@ class CalciumCurrentTType(LeakCurrent):
   
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
         
-        if ( np.any(self.__class__.s_inf_fast > 0) ):
-            return
+#        if ( self.__class__.step > 0 ):
+#            return
         
         self.__class__.Vmin = Vmin
+        self.__class__.Vmax = Vmax
         self.__class__.step = step
         
         Vrange = np.arange(Vmin, Vmax, step)
@@ -423,14 +443,10 @@ class CalciumCurrentTType(LeakCurrent):
     def updateIfast(self, V, dt):
         
         idx = int( (V - self.__class__.Vmin) / self.__class__.step )
-
         
         self.s = self.__class__.s_inf_fast[idx]
-        
-
         u_inf = self.__class__.u_inf_fast[idx]
         T_u = self.__class__.u_T_fast[idx]
-        
         self.u = u_inf - (u_inf - self.u) * T_u  
 
 class Neuron:
@@ -451,8 +467,7 @@ class Neuron:
         I = 0
         for i in self.currents:
             i.updateI(self.V, dt)
-            
-            
+
             I -= i.getI(self.V)
         
         self.V += dt * (I / self.C)
@@ -471,9 +486,7 @@ class Neuron:
         self.Vhist.append(self.V)
     
     def run(self, dt=0.01, duration=200):
-        
-   
-       
+
         t = 0
         while(t <= duration):
             self.updateV(dt)
@@ -489,8 +502,7 @@ class Neuron:
         
         for i in self.currents:
             i.precumpute_funtions(Vmin, Vmax, step, dt)
-        
-       
+
         t = 0
         while(t <= duration):
             self.updateVfast(dt)
