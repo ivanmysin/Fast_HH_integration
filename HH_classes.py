@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-fast integration
+library of classes for demostration fast integration of Hodgkin-Husley equations
+
+all equations are got from  "Minimal Hodgkin–Huxley type models for different classes of cortical and thalamic neurons" (Pospischil at al, 2008) 
+
 """
 
 import numpy as np
-exp = np.exp
+exp = np.exp # you can use other exp function
 
-
+# base class for currents
 class Current:
     def __init__ (self, params):
         self.I = -params["Iext"]
@@ -27,32 +30,42 @@ class Current:
     def getI(self, V):
         return self.I
 
+# class for leak current
 class LeakCurrent(Current):
     def __init__(self, params):
-        self.Erev = params["Erev"]
-        self.gmax = params["gmax"]
+        self.Erev = params["Erev"] # save reverse potential
+        self.gmax = params["gmax"] # save maximal conductance
     
     def getI(self, V):
+        """
+        return current value
+        """
         return self.gmax * (V - self.Erev)
     
-
+# class for sodium current
 class SodiumCurrent(LeakCurrent):
-    
+    # save x_inf and T functions in class atributes
     m_inf_fast = 0
     h_inf_fast = 0
     h_T_fast = 0
+    # save parameters for precomputed functions
     Vmin = 0
     Vmax = 0
     step = 0
+    
     def __init__(self, params):
         super().__init__(params)
-        self.Vt = params["Vt"]
+        self.Vt = params["Vt"] # save threshold of spike genereation
+        # declare gate variables
         self.m = 0
         self.h = 0
         
         
     
     def get_alpha_m(self, V):
+        """
+        return alpha(V) for m
+        """
         x = V - self.Vt - 13
         if ( np.any(x == 0) ):
             x += 0.0000001
@@ -60,6 +73,9 @@ class SodiumCurrent(LeakCurrent):
         return alpha_m
     
     def get_beta_m(self, V):
+        """
+        return beta(V) for m
+        """
         x =  V - self.Vt - 40
         if ( np.any(x == 0) ):
             x += 0.0000001
@@ -67,14 +83,24 @@ class SodiumCurrent(LeakCurrent):
         return beta_m
 
     def get_alpha_h(self, V):
+        """
+        return alpha(V) for h
+        """
         alpha_h = 0.128 * exp(-(V - self.Vt - 17) / 18)
         return alpha_h
     
     def get_beta_h(self, V):
+        """
+        return beta(V) for h
+        """
         beta_h = 4 / ( 1 + exp( -0.2*(V - self.Vt - 40) ) )
         return beta_h
 
     def init_gate_vars(self, V):
+        """
+        initiate gate variables before run of simulation,
+        m = m_inf and h = h_inf
+        """
         alpha_m = self.get_alpha_m(V)
         beta_m = self.get_beta_m(V)
         self.m = alpha_m / (alpha_m + beta_m)
@@ -85,20 +111,28 @@ class SodiumCurrent(LeakCurrent):
     
     
     def updateI(self, V, dt):
+        """
+        update values of gate variables for new V on time step dt
+        """
         alpha_m = self.get_alpha_m(V)
         beta_m = self.get_beta_m(V)
         self.m = alpha_m / (alpha_m + beta_m)
         
         alpha_h = self.get_alpha_h(V)
         beta_h = self.get_beta_h(V)
-        h_inf = alpha_h / (alpha_h + beta_h)
+        
         tau_inf = 1 / (alpha_h + beta_h)
+        h_inf = alpha_h * tau_inf
         
         self.h = h_inf - (h_inf - self.h) * exp(-dt/tau_inf)
     
     
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
+        """
+        precompute x_inf and T functions from Vmin to Vmax with step, dt need precomputing T
+        we save x_inf and T functions and their parameters to class atributes
         
+        """
 #        if ( self.__class__.step > 0 ):
 #            return
         
@@ -119,8 +153,11 @@ class SodiumCurrent(LeakCurrent):
     
     
     def updateIfast(self, V, dt):
+        """
+        update values of gate variables for new V with usage of precomputed values
+        """
         
-        idx = int( (V - self.__class__.Vmin) / self.__class__.step )
+        idx = int( (V - self.__class__.Vmin) / self.__class__.step ) # index for precomputed array
 
         self.m = self.__class__.m_inf_fast[idx]
 
@@ -141,6 +178,8 @@ class PotassiumCurrent(LeakCurrent):
     Vmin = 0
     Vmax = 0
     step = 0
+    
+    
     def __init__(self, params):
         super().__init__(params)
         self.Vt = params["Vt"]
@@ -148,6 +187,9 @@ class PotassiumCurrent(LeakCurrent):
         
     
     def get_alpha_n(self, V):
+        """
+        return alpha(V) for n
+        """
         x = V - self.Vt - 15
         if (np.any(x == 0) ):
             x += 0.0000001
@@ -156,12 +198,17 @@ class PotassiumCurrent(LeakCurrent):
         return alpha_n
     
     def get_beta_n(self, V):
+        """
+        return beta(V) for n
+        """
         beta_n = 0.5 * exp(-(V - self.Vt - 10)/40)
         return beta_n
 
     
     def updateI(self, V, dt):
-       
+        """
+        update n
+        """
         alpha_n = self.get_alpha_n(V)
         beta_n = self.get_beta_n(V)
         n_inf = alpha_n / (alpha_n + beta_n)
@@ -170,6 +217,9 @@ class PotassiumCurrent(LeakCurrent):
         self.n = n_inf - (n_inf - self.n) * exp(-dt/tau_inf)
     
     def init_gate_vars(self, V):
+        """
+        initialize n = n_inf
+        """
         alpha_n = self.get_alpha_n(V)
         beta_n = self.get_beta_n(V)
         self.n = alpha_n / (alpha_n + beta_n)
@@ -180,7 +230,11 @@ class PotassiumCurrent(LeakCurrent):
 
 
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
+        """
+        precompute x_inf and T functions from Vmin to Vmax with step, dt need precomputing T
+        we save x_inf and T functions to class atributes
         
+        """        
 #        if ( self.__class__.step > 0 ):
 #            return
         
@@ -198,8 +252,10 @@ class PotassiumCurrent(LeakCurrent):
     
     
     def updateIfast(self, V, dt):
-        
-        idx = int( (V - self.__class__.Vmin) / self.__class__.step )
+        """
+        update values of gate variables for new V with usage of precomputed values
+        """        
+        idx = int( (V - self.__class__.Vmin) / self.__class__.step ) # index for precomputed array
 
         n_inf = self.__class__.n_inf_fast[idx]
         T_n = self.__class__.n_T_fast[idx]
@@ -209,6 +265,7 @@ class PotassiumCurrent(LeakCurrent):
 
 
 class SlowPotassiumCurrent(LeakCurrent):
+    
     p_inf_fast = 0
     p_T_fast   = 0
     Vmin = 0
@@ -236,7 +293,9 @@ class SlowPotassiumCurrent(LeakCurrent):
     
     
     def updateI(self, V, dt):
-       
+        """
+        update p
+        """       
         p_inf = self.get_p_inf(V)
         tau_inf = self.get_tau_inf(V)
         self.p = p_inf - (p_inf - self.p) * exp(-dt/tau_inf)
@@ -246,7 +305,11 @@ class SlowPotassiumCurrent(LeakCurrent):
 
     
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
+        """
+        precompute x_inf and T functions from Vmin to Vmax with step, dt need precomputing T
+        we save x_inf and T functions to class atributes
         
+        """        
 #        if ( self.__class__.step > 0 ):
 #            return
         
@@ -263,7 +326,9 @@ class SlowPotassiumCurrent(LeakCurrent):
     
     
     def updateIfast(self, V, dt):
-        
+        """
+        update values of gate variables for new V with usage of precomputed values
+        """        
         idx = int( (V - self.__class__.Vmin) / self.__class__.step )
         if (idx < 0):
             p_inf = self.get_p_inf(V)
@@ -323,6 +388,9 @@ class CalciumCurrentLType(LeakCurrent):
         self.r = alpha_r / (alpha_r + beta_r)
 
     def updateI(self, V, dt):
+        """
+        update q, r
+        """
         alpha_q = self.get_alpha_q(V)
         beta_q = self.get_beta_q(V)
         tau_q_inf = 1 / (alpha_q + beta_q)
@@ -342,7 +410,11 @@ class CalciumCurrentLType(LeakCurrent):
     
     
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
+        """
+        precompute x_inf and T functions from Vmin to Vmax with step, dt need precomputing T
+        we save x_inf and T functions to class atributes
         
+        """        
 #        if ( self.__class__.step > 0 ):
 #            return
         
@@ -364,7 +436,9 @@ class CalciumCurrentLType(LeakCurrent):
     
     
     def updateIfast(self, V, dt):
-        
+        """
+        update values of gate variables for new V with usage of precomputed values
+        """       
         idx = int( (V - self.__class__.Vmin) / self.__class__.step )
 
         q_inf = self.__class__.q_inf_fast[idx]
@@ -412,6 +486,9 @@ class CalciumCurrentTType(LeakCurrent):
         self.u = self.get_u_inf(V)    
         
     def updateI(self, V, dt):
+        """
+        update s, u
+        """
         self.s = self.get_s_inf(V)
         u_inf = self.get_u_inf(V)  
         tau_u_inf = self.get_tau_u_inf(V)
@@ -421,7 +498,11 @@ class CalciumCurrentTType(LeakCurrent):
         return self.gmax * self.s * self.s * self.u * (V - self.Erev)     
   
     def precumpute_funtions(self, Vmin, Vmax, step, dt):
+        """
+        precompute x_inf and T functions from Vmin to Vmax with step, dt need precomputing T
+        we save x_inf and T functions to class atributes
         
+        """        
 #        if ( self.__class__.step > 0 ):
 #            return
         
@@ -441,7 +522,9 @@ class CalciumCurrentTType(LeakCurrent):
     
     
     def updateIfast(self, V, dt):
-        
+        """
+        update values of gate variables for new V with usage of precomputed values
+        """        
         idx = int( (V - self.__class__.Vmin) / self.__class__.step )
         
         self.s = self.__class__.s_inf_fast[idx]
@@ -449,6 +532,7 @@ class CalciumCurrentTType(LeakCurrent):
         T_u = self.__class__.u_T_fast[idx]
         self.u = u_inf - (u_inf - self.u) * T_u  
 
+# class realize neuron simulation
 class Neuron:
     
     def __init__(self, params):
@@ -456,14 +540,21 @@ class Neuron:
         
         self.V = params["V0"]
         self.C = params["C"]
-        self.Vhist = [self.V]
+        self.Vhist = [self.V] # array for save history of V 
 
     def addCurrent(self, current):
+        """
+        add current to neuron model
+        """
         current.init_gate_vars(self.V)
         self.currents.append(current)
         
     
     def updateV(self, dt):
+        """
+        update V for time step dt
+        Euler methods is used 
+        """
         I = 0
         for i in self.currents:
             i.updateI(self.V, dt)
@@ -475,6 +566,10 @@ class Neuron:
         self.Vhist.append(self.V)
         
     def updateVfast(self, dt):
+        """
+        update V for time step dt with usage updateIfast methods of currents
+        Euler methods is used 
+        """
         I = 0
         for i in self.currents:
             i.updateIfast(self.V, dt)
@@ -486,6 +581,9 @@ class Neuron:
         self.Vhist.append(self.V)
     
     def run(self, dt=0.01, duration=200):
+        """
+        run simulation of neuron for duration with time step dt
+        """
 
         t = 0
         while(t <= duration):
@@ -495,7 +593,9 @@ class Neuron:
             
             
     def runfast(self, dt=0.01, duration=200):
-        
+        """
+        run simulation of neuron for duration with time step dt with usage of precomputed functions
+        """
         Vmin = -100.0
         Vmax = 60.0
         step = 0.01
@@ -505,8 +605,8 @@ class Neuron:
 
         t = 0
         while(t <= duration):
-            self.updateVfast(dt)
             
+            self.updateVfast(dt)
             t += dt
 
 ###############################################################################
